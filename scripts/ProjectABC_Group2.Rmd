@@ -1,0 +1,529 @@
+---
+title: "**Zika virus evolution and spread in the Americas**"
+author: "Judit Camps, Marta Ibáñez and Aina Montalban"
+date: "21 October 2019"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    toc: yes
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 4)
+  #install.packages("prettydoc")
+```
+
+<style>
+  @import url(https://fonts.googleapis.com/css?family=Fira+Sans:300,300i,400,400i,500,500i,700,700i);
+  @import url(https://cdn.rawgit.com/tonsky/FiraCode/1.204/distr/fira_code.css);
+  @import url("https://use.fontawesome.com/releases/v5.10.1/css/all.css");
+ 
+  body {
+    font-family: 'Fira Sans','Droid Serif', 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
+  }
+ 
+  /* Make bold syntax compile to RU-red */
+  strong {
+    color: #9932CC;
+  }
+</style>
+
+
+# PART A
+## Dataset description
+
+### Where and why was the information collected?
+
+<div style="text-align: justify"> 
+The purpose of the paper ("*Zika virus evolution and spread in the Americas*", https://www.nature.com/articles/nature22402) was to get more information on the Zika virus in terms of studying its evolution and epidemiology using genomics. 
+
+The information was collected by using multiple sequence approaches from samples of 10 different countries. In particular, the data was collected from 110 ZKIV sequenced genomes, 32 sequences from the Genbank and 32 sequences generated in the ZiBRA project. The ZKIV sequenced genomes were obtained from clinical and mosquito samples from Brazil, Honduras, Colombia, among others.
+
+The table chosen from this paper has all the observed nonsynonymous SNPs that have been used for SNP analysis. These nonsynonymous mutations can reveal possible functional changes in the virus, as well as a chance to find an effective diagnostic test.
+</div>
+ 
+### Which is the meaning of each variable?
+
+There are different groups in which you can divide the **12 variables**: Allele, allele frequency within outbreak, number of alleles and impact on ZIKV proteins. 
+
+The variables for the Allele group:
+
+* **Ancestral Allele:** nominal variable that indicates the ancestral nucleotide in a position.
+* **Derived Allele:** nominal variable that indicates the derived nucleotide in a position.
+
+The variables for the Allele frequency within outbreak:
+
+* **Ancestral Allele frequency:** quantitative variable that indicates the allele frequency of the ancestral nucleotide in a position.
+* **Derived Allele frequency:** quantitative variable that indicates the allele frequency of the derived nucleotide in a position. This variable is also called Minor Allele Frequency (MAF).
+
+<i class="fas fa-info-circle"></i> The allele frequency measures the relative frequency of an allele on a locus  in a population.
+
+The variables for the number of alleles:
+
+* **Minor number of alleles:** quantitative variable that indicates the number of alleles of the derived nucleotide.
+* **Total number of alleles:** quantitative variable that indicates the total number of alleles.
+
+The variables for the impact on ZIKV proteins:
+
+* **Codon position:** ordinal variable that indicates the position that is affected in the protein.
+* **Degeneracy:** degree of degeneracy of the protein
+* **Codon change:** nominal variable which tells which is the codon changes for each position.
+* **Amino acid change:** nominal variable which explains the amino acid change for each position.
+* **Protein:** nominal variable which indicates the type of protein.
+
+Therefore, all these information is provided for each nonsynonymous mutation. 
+
+### Which variables do we pick to create the graphs?
+
+The categorical variables we've chosen are: Allele, degeneracy, codon change, amino acid change and protein.
+The continuous variables we've worked with in allele frequency within outbreak (ancestral and derived).
+In our case, the minor and total number of alleles are equivalent with the frequencies. So, we have not used them.
+
+
+### Do the variables have unit? Which one?
+
+The quantitative variables do have units, for example the number of alleles which we would say the unit is the number of **counts** of that specific allele.
+
+Regarding the Allele frequency variable, the variable is obtained from the following proportions: 
+
+- Derived Allele Frequency = (Minor / Total)
+- Ancestral Allele Frequency = 1 - Derived Allele Frequency 
+
+
+### Does the data set have a long format?
+
+The dataset is in long format. However, to plot easily some graphs, we can make a subset of some columns. For example, a subset dataset would be the allele frequency and allele type, which we will need to reshape it  in tidy format. 
+
+
+### Read it into R and reshape the data if necessary into long format.
+
+```{r message=FALSE, warning=FALSE}
+library(readxl)
+data <- read_excel("nature22402-s3.xlsx", skip = 1)
+```
+
+
+Rename the columns:
+
+```{r}
+colnames(data)[1] <- "Position"
+colnames(data)[2] <- "Ancestral.Allele"
+colnames(data)[3] <- "Derived.Allele"
+colnames(data)[4] <- "Ancestral.Freq"
+colnames(data)[5] <- "Derived.Freq"
+colnames(data)[8] <- "Codon.position"
+colnames(data)[10] <- "Codon.change"
+colnames(data)[11] <- "Amino.Acid.Change"
+```
+
+
+#### Check the variable classes and update them if necessary.
+
+```{r}
+#Allele
+class(data$Ancestral.Allele)
+class(data$Derived.Allele)
+
+#Allele frequency within outbreak
+class(data$Ancestral.Freq)
+class(data$Derived.Freq)
+
+#Number of alleles
+class(data$Minor)
+class(data$Total)
+
+#Impact on ZIKV proteins
+class(data$Codon.position)
+class(data$Degeneracy) #factor?  
+data$Degeneracy <- as.factor(data$Degeneracy)
+class(data$Codon.change)
+class(data$Amino.Acid.Change)
+class(data$Protein) #can be a factor?
+data$Protein <- as.factor(data$Protein)
+```
+The reason we change the values of degeneracy, amino acid change and protein to factors is because we want to treat them as categorical values.
+So for degeneracy, we'll have 3 categories, for protein we'll have as many as different proteins we have for the experiment and for amino acid change we'll have each type of change as a different category. 
+In this way it will be easier to visualize the data.
+
+
+
+
+
+
+
+
+# PART B
+
+In order to reshape the data, we have generated a subset of the Allele and Allele frequency variables in long format. 
+
+```{r}
+subset_data_alleles <- data[,c(1,4,5)]
+
+library(reshape2)
+long_subset_data_alleles <- melt(subset_data_alleles, 
+                                 id.vars ="Position", 
+                                 variable.name = "A_D",
+                                 value.name = "Frequency")
+
+```
+
+
+```{r}
+subset_data_alleles_nuc <- data[,c(1,2,3)]
+
+long_subset_data_alleles_nuc <- melt(subset_data_alleles_nuc, 
+                                 id.vars ="Position", 
+                                 variable.name = "A_D",
+                                 value.name = "Nucleotide")
+
+```
+
+Now, we are going to explore the data using ggplot2. First, we are going to represent the distribution of the variables and the relationship between variables. Then, we are going to select three graphics that describe better our data.
+
+## Dataset visualization
+
+```{r}
+library(ggplot2)
+```
+
+
+### Allele Frequency Distribution
+
+Here, we are plotting the allele frequency distribution, what we did was to the different allele frequencies for derived and ancestral, and plot them together. What we get from this is a histogram in which we represent if they're derived or ancestral by colour and you can see that the most frequent allele frequency for the ancestral allele type is around 1 and around 0-0.1 for the derived ones.
+
+```{r}
+ggplot(long_subset_data_alleles, aes(Frequency, fill=A_D)) + 
+  geom_histogram(position = "dodge") +  xlab("Allele Frequency") + scale_x_continuous(breaks = seq(0,1, by = 0.1)) + 
+  theme_minimal() + 
+  scale_fill_viridis_d(name="Allele Type", labels=c("Ancestral", "Derived")) + ylab("Count") + labs(title="Allele Frequency Distribution")
+```
+
+### Nucleotide Distribution
+
+For both ancestral and derived alleles, we have taken them and plotted its count in a histogram to see which is the most frequent nucleotide in each group. We have differentiated the allele type by colours (Ancestral/ Derived). As a conclusion, the most frequent allele type in ancestral is A and for derived is G.
+```{r}
+ggplot(long_subset_data_alleles_nuc, aes(Nucleotide, fill=A_D)) + 
+  geom_bar(position = "dodge") + theme_minimal() + 
+  scale_fill_viridis_d(name="Allele Type", labels=c("Ancestral", "Derived")) + labs(title = "Nucleotide Distribution", y="Count")
+```
+
+
+
+### Degeneracy distribution
+
+In this plot we want to show the different types of degeneracy we have in our data. 
+We can see that the amounts vary greatly if we compare the degeneracy of type 1, which is 80.2% of the data, to the degeneracy of type 2 or 3, which are 14.8% and 5% respectively.
+```{r}
+ggplot(data, aes(x=factor(1), fill=Degeneracy)) + geom_bar(width = 1) + coord_polar("y", start = 0) + scale_fill_viridis_d() + theme_minimal() + theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(), legend.position = "left") + geom_text(stat='count', aes(label=paste(100*round((..count..)/sum(..count..),3), "%")), hjust=1, color="red", size=3) + labs(x="", y="", title="Degeneracy Distribution") 
+
+
+```
+
+### Protein Distribution
+
+In this plot, we took the protein variable and plotted the number of times each one appears. 
+
+As a result,  we get a histogram in which each colour represents a type, and where it can be seen that the one with the highest count is NS5. This shows that the protein type that has a higher content of  nonsynonymous mutations is the NS5. On the contrary, the membrane is the protein with less nonsynonymous mutations. 
+
+```{r}
+
+ggplot(data, aes(Protein, fill=Protein)) + geom_bar(show.legend = FALSE) + 
+  theme_minimal() + scale_fill_viridis_d() + coord_flip() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(stat='count', aes(label=..count..), hjust=-0.3)
+```
+
+
+### Distribution of the AA changes
+
+The following graph is a heatmap that represents how many times an amino acid has changed to another one.
+It is important to know that in order to make this plot, we had to transform the *Amino Acid changes* column of our dataset.
+
+First, we defined a matrix with 0s, which the rows and columns names are the amino acids abbreviations. The rows will represent the original amino acid, whereas the columns will represent the new amino acid produced by the mutation. 
+
+Secondly, to make things easier we changed the format of the mentioned column. In other words, the original format contains an arrow between the two amino acids (e.g "R -> T"), so we decided to remove the arrow with gsub function. 
+
+```{r}
+AA <- c("A","R","N","D","C","Q","E","G", "H", "I", "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V")
+length(AA)
+M <- matrix(0, nrow = 20, ncol = 20)
+colnames(M) <- AA
+rownames(M) <- AA
+data$Amino.Acid.Change <- gsub("->", "-", data$Amino.Acid.Change)
+```
+Then, we coded the following loop, which count how many times an amino acid has changed to another one and introduces it to the matrix.
+
+```{r}
+for (i in c(1:20)){
+  for(j in c(1:20)){
+    s <- paste(rownames(M)[i], colnames(M)[j],sep=" - ")
+    if (s %in% data$Amino.Acid.Change){
+    for (ele in data$Amino.Acid.Change){
+      if (ele == s){
+        M[i,j] <- M[i,j] +  1
+      }else{
+        next;}}}}
+}
+```
+
+Once the matrix is filled, we reshaped it to long format with the melt function and finally, we plotted the data.
+
+As we have just mentioned, the plot shows how many times an amino acid has changed to another one. In the y-axis, there are the original amino acids, while in the x-axis the new amino acids.
+
+We can observe that Lysine (K) to Arginine (R) is the most common change in the nonsynonymous mutations. Changes from Threonine (T) and Valine (V) to Alanine (A) and from Histidine (H) to Tyrosine (Y) are also frequent. Furthermore, there are a lot of mutations that occur a few times (1 or 2 times) or they that haven't occurred (blank spaces).
+
+```{r}
+long_data_M <- melt(M)
+colnames(long_data_M) <- c("Original", "Change", "Count")
+ggplot(long_data_M, aes(x=Change, y=Original, fill=Count)) + geom_tile() + 
+    scale_fill_gradient(low="white", high="purple4")   + 
+    geom_text(aes(label = (ifelse(Count > 0, Count, ""))), color="white") + labs(title=" Distribution of the AA changes")
+```
+
+
+### MAF of nonsynonymous mutations related with degenaracy
+
+In the next plot, we can observe the Minor Alle frequency of the nonsynonymous mutations in the position of the genome. We can see that four positions of the genome have a higher frequency. Also, we have related the position with the degree of degeneracy, three of the four positions with a high minor allele frequency is of degree 2. 
+
+Notice that the positions with a degeneracy degree of 3 have a small allele frequency.
+
+Moreover, we have labelled the relevant positions more visually, as there are a total of 202 positions. 
+
+```{r}
+ggplot(data, aes(x=as.factor(Position), y = Derived.Freq, fill = as.factor(Degeneracy)))  + geom_col() + 
+  scale_fill_viridis_d(name = "Degeneracy") + 
+  labs(x= "Position of the genomes", y = "Minor Allele Frequency (MAF)", title = "MAF of nonsynonymous mutations related with degeneracy") + 
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank()) + 
+  annotate(geom="text", x=59, y=1, label="2853") + annotate(geom="text", x=70, y=0.4, label="3534") + annotate(geom="text", x=170, y=0.37, label="8631")   + annotate(geom="text", x=193, y=0.38, label="10301")  
+```
+
+
+### Protein related with degeneracy and MAF
+
+The next graph shows which proteins have a higher minor allele frequency. And again, we can relate it in terms of degeneracy. 
+
+We can observe that the proteins with a high Minor Allele Frequency are NS1 and NS5. The NS4B protein is the most affected in terms of degeneration. Moreover, the paper suggested to find an excess of nonsynonymous mutation in the envelope, but as the authors said, the minor allele frequency is similar to other proteins.
+```{r}
+p1 <- ggplot(data, aes(Protein,y=Derived.Freq, group=Derived.Freq, fill=Degeneracy, 
+                       text=paste("Protein: ", Protein,"\n", "Derived Freq: ", Derived.Freq,"\n", 
+                                  "Degeneracy: ", Degeneracy,"\n" ,"Genome Position: ", Position))) + 
+  geom_col(position = "dodge") +
+  labs(x= "Protein", y = "Minor Allele Frequency (MAF)", title = "Protein related with degeneracy and Minor Allele Frequency") +  
+  theme_minimal() + theme(axis.text.x = element_text(angle=60, hjust =1)) + scale_fill_viridis_d()
+
+
+p1
+```
+
+### Mutation distribution related with degeneracy
+
+The frequency of nucleotide changes that occur between the ancestral and derived are shown in the next plot. The degeneracy degree has also taken into account.
+
+This time, we joined two columns (Ancestral Allele and Derived Allele) in one column called mutation. The new variable allowed as to find the most frequent nucleotide change of the nonsynonymous mutations. 
+
+We can observe that the transition substitutions are more common than transversion substitutions. A transition substitution changes a purine nucleotide to another purine (A <--> G), or a pyrimidine nucleotide to another pyrimidine (C <--> T). Regarding the degeneracy, changes between guanine and adenine have a higher degree of degeneracy. 
+
+```{r}
+data$mutation <- paste(data$Ancestral.Allele, data$Derived.Allele)
+ggplot(data, aes(mutation, fill = as.factor(Degeneracy))) +geom_bar() + 
+  scale_fill_viridis_d( name = "Degeneracy") + scale_x_discrete(labels=c("A C" = "A -> C", "A G" = "A -> G", "A T" = "A -> T", "C A" = "C -> A", "C G" = "C -> G", "C T" = "C -> T", "G A" = "G -> A", "G C" = "G -> C", "G T" = "G -> T", "T A" = "T -> A", "T C" = "T -> C","T G" = "T -> G" )) + 
+  theme_minimal() + theme(axis.text.x = element_text(angle=60, hjust =1)) +
+  labs(x="Mutation", y="Frequency", title = "Mutation distribution related with degeneracy")
+```
+
+
+
+# PART C
+
+## Dataset Interactive visualization
+
+For the different figures we have made in the previous part A and B, we have decided that some would beneficiate from some interactivity.
+
+
+### Using htmlwidges
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(plotly)
+```
+
+For the Distribution of Amino Acid changes, we decided to use plotly, so that when you would click on one of the cells of the heatmap, it will show the number of times the change has been produced and the amino acids, in this case the original one, before the change, and also after. This way is easier to visualise the change for the different amino acids.
+
+```{r}
+
+p2 <- ggplot(long_data_M, aes(x=Change, y=Original, fill=Count,  text = paste('Original: ', Original,"\n", 'Change: ', Change,"\n", 'Count: ', Count))) + geom_tile() + 
+    scale_fill_gradient(low="white", high="purple4")   + 
+    geom_text(aes(label = (ifelse(Count > 0, Count, ""))), color="white") + labs(title=" Distribution of the AA changes")
+
+ggplotly(p2, tooltip = "text")
+```
+
+
+
+### Adding interactive controls (Shiny)
+
+A Shiny app was performed in the plot that relates degeneracy degree, Minor Allele Frequency and Protein. In this case, we have used the Shiny tools and the plotly library. This interactive plot app will allow having a more precise idea of the dataset chosen. 
+Each bar is a nonsynonymous mutation; the x-axis indicates the protein type and y-axis the MAF. Besides, the colour shows the degree of degeneracy. 
+
+In the app, you can choose the Protein type with a checkbox, (i.e. capsid, NS1, membrane, envelope ... ). And, for each protein type,  we can see the MAF and the degeneration of the nonsynonymous mutations. We also added another checkbox from which you can choose the degeneracy number (1,2 or 3). 
+
+Furthermore, with the plotly library, when we hover the mouse over a bar, we can obtain detailed information of the selected bar, such as the position of the nonsynonymous mutation in the genome or the amino acid change. 
+
+Finally, we have also added a table to see more information about each mutation. 
+
+
+```{r eval=TRUE}
+
+library(shiny)
+library(dplyr)
+ui <- fluidPage(
+  titlePanel(HTML('Protein related with degeneracy and MAF')),
+  sidebarLayout(
+    
+    sidebarPanel(
+      checkboxGroupInput("protInput", "Protein: ", choices = c("2K" ,"capsid", "envelope" ,"membrane", "NS1", "NS2A", "NS2B", "NS3","NS4A", "NS4B",
+                                                               "NS5", "propeptide"), selected = c("NS1", "NS5", "capsid")),
+      checkboxGroupInput("degInput", "Degeneracy",
+                         choices = c("1", "2" ,"3"),
+                         selected = c("1")),
+    ),
+    mainPanel(plotlyOutput("plot"),
+              tableOutput("table")
+              
+    )
+    
+  ))
+
+# Define server logic required to draw a histogram
+server <- function(input, output) {
+  
+  output$plot <- renderPlotly({
+    
+    filtered <- data %>% 
+      filter(Degeneracy %in% input$degInput, 
+             Protein %in% input$protInput)
+    
+    p1 <- ggplot(filtered, aes(as.factor(Protein),Derived.Freq, fill=as.factor(Degeneracy), 
+                               text=paste("Protein: ", Protein,"\n", "Derived Freq: ", Derived.Freq,"\n", "Degeneracy: ",
+                                          Degeneracy,"\n" ,"Genome Position: ", Position,"\n" ,"AA Change: ", Amino.acid.change))) +
+      geom_col(position = "dodge") +
+      labs(x= "Protein", y = "Minor Allele Frequency (MAF)", title = "Protein related with degeneracy and Minor Allele Frequency") +  
+      theme_minimal() + theme(axis.text.x = element_text(angle=60, hjust =1)) + scale_fill_viridis_d()
+    
+    ggplotly(p1, tooltip = "text")
+  })
+  
+  
+  output$table <- renderTable({
+    filtered <- data %>% 
+      filter(Degeneracy %in% input$degInput, 
+             Protein %in% input$protInput)
+    filtered
+    
+  })
+  
+}
+
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+
+
+
+### Built-in interactive options (Shiny)
+Finally, we make an interactive visualization using Shiny built-in interactive options in order to print the information of the individual observations. We have used the nearPoints() and the brushedPoints() functions to see the differences between them. However, in our case, we are working with columns.
+
+We have also added a slider input as there are a lot of positions and this way it is easier and clearer to see the interactive plot. With this plot, you get clear information about the minor allele frequencies with the different positions related to degeneracy. It is very useful to see the different data for the positions, as with just clicking at one point you get information for lots of variables (position, ancestral, derived, Afreq, Dfreq...) while also being able to differ the different degeneracy numbers and minor allele frequency.
+
+**NOTE**: When we select a specific column by clicking, we need to click the **top** of the col. 
+
+```{r include=FALSE}
+colnames(data)[1] <- "Position"
+colnames(data)[2] <- "Ancestral"
+colnames(data)[3] <- "Derived"
+colnames(data)[4] <- "Allele.Freq"
+colnames(data)[5] <- "Derived.Freq"
+colnames(data)[8] <- "Codon.position"
+colnames(data)[10] <- "Codon.change"
+colnames(data)[11] <- "Amino.acid.change"
+```
+
+
+```{r}
+data$Degeneracy <- as.factor(data$Degeneracy)
+data$Protein <- as.factor(data$Protein)
+
+
+ui <- fluidPage(
+  verticalLayout(
+    h1("MAF of nonsynonymous mutations"),
+    sliderInput("Pos", "Position:",
+                min = 0, max = 11000, value = c(3994,7064)
+    ),
+    plotOutput("plot1", brush = "plot_brush", click = "plot_click"),
+    br(),
+    
+    h4("Brushed cols"),
+    fluidRow(
+      column(width = 10, textOutput("info")),
+    column(width = 6, tableOutput("infoBrush"))
+    
+    ),
+    column(width=6, h4("Click cols")),
+    
+    column(width = 6, tableOutput("infoClick"))
+  )
+)
+
+server <- function(input, output) {
+  output$plot1 <- renderPlot({
+    
+    filtered <- data %>% 
+      filter(Position >= input$Pos[1], 
+             Position <= input$Pos[2])
+    
+    
+    p <- ggplot(filtered, aes(x=as.factor(Position), y = Derived.Freq, fill = as.factor(Degeneracy)))  + 
+      geom_col() + 
+      scale_fill_viridis_d(name = "Degeneracy") + 
+      labs(x= "Position of the genomes", y = "Minor Allele Frequency (MAF)", title = "MAF of nonsynonymous mutations related with degeneracy") + 
+      theme(axis.text.x = element_blank(), axis.ticks = element_blank())  
+    p
+    
+  })
+  
+  
+  
+  output$infoBrush <- renderTable({
+    # With base graphics, need to tell it what the x and y variables are.
+    tbl_brush <- brushedPoints(data, input$plot_brush, xvar="Position", yvar = "Derived.Freq")
+    tbl_brush[,c("Position", "Ancestral", "Derived", "Allele.Freq","Derived.Freq", "Codon.position", "Degeneracy", "Codon.change","Amino.acid.change", "Protein")]
+  })
+  
+  output$info <- renderText({
+    tbl_brush <- brushedPoints(data, input$plot_brush, xvar="Position", yvar = "Derived.Freq")
+    
+    paste("Number of results in the table: ", nrow(tbl_brush))
+  })
+  
+  output$infoClick <- renderTable({
+    # With base graphics, need to tell it what the x and y variables are.
+    tbl_click <- nearPoints(data, input$plot_click, xvar="Position", yvar = "Derived.Freq")
+    tbl_click[,c("Position", "Ancestral", "Derived", "Allele.Freq","Derived.Freq", "Codon.position", "Degeneracy", "Codon.change","Amino.acid.change", "Protein")]
+    
+  })
+  
+  
+  
+  
+}
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+
